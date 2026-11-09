@@ -26,11 +26,19 @@ from .coordinator import NightscoutConfigEntry, NightscoutCoordinator
 MGDL = UnitOfBloodGlucoseConcentration.MILLIGRAMS_PER_DECILITER
 MMOL = UnitOfBloodGlucoseConcentration.MILLIMOLE_PER_LITER
 
-# Nightscout's trend names (direction plugin)
-DIRECTIONS = [
-    "DoubleUp", "SingleUp", "FortyFiveUp", "Flat", "FortyFiveDown", "SingleDown",
-    "DoubleDown", "NOT COMPUTABLE", "RATE OUT OF RANGE", "NONE",
-]
+# Nightscout's trend names (direction plugin) -> HA state keys, which must be snake_case.
+DIRECTIONS = {
+    "DoubleUp": "double_up",
+    "SingleUp": "single_up",
+    "FortyFiveUp": "forty_five_up",
+    "Flat": "flat",
+    "FortyFiveDown": "forty_five_down",
+    "SingleDown": "single_down",
+    "DoubleDown": "double_down",
+    "NOT COMPUTABLE": "not_computable",
+    "RATE OUT OF RANGE": "rate_out_of_range",
+    "NONE": "none",
+}
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -78,8 +86,8 @@ SENSORS: tuple[NightscoutSensorDescription, ...] = (
         key="glucose_trend",
         translation_key="glucose_trend",
         device_class=SensorDeviceClass.ENUM,
-        options=DIRECTIONS,
-        value_fn=lambda d: d.direction if d.direction in DIRECTIONS else None,
+        options=list(DIRECTIONS.values()),
+        value_fn=lambda d: DIRECTIONS.get(d.direction or ""),
     ),
     NightscoutSensorDescription(
         key="last_reading",

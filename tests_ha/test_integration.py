@@ -62,7 +62,7 @@ async def test_sensors(hass: HomeAssistant, aioclient_mock, units, glucose, unit
     assert round(float(g.state), 1) == float(glucose) and g.attributes["unit_of_measurement"] == unit
     assert hass.states.get("sensor.ns_insulin_on_board").state == "1.35"
     assert round(float(hass.states.get("sensor.ns_carbs_on_board").state), 1) == 28.9
-    assert hass.states.get("sensor.ns_glucose_trend").state == "FortyFiveUp"
+    assert hass.states.get("sensor.ns_glucose_trend").state == "forty_five_up"
     f30 = hass.states.get("sensor.ns_forecast_in_30_minutes")
     assert len(f30.attributes["forecast"]) == 6
     assert hass.states.get("sensor.ns_last_reading").state == "2026-01-01T13:00:00+00:00"

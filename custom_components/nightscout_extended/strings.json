@@ -42,29 +42,45 @@
   },
   "entity": {
     "sensor": {
-      "glucose": { "name": "Glucose" },
-      "glucose_delta": { "name": "Glucose change" },
+      "glucose": {
+        "name": "Glucose"
+      },
+      "glucose_delta": {
+        "name": "Glucose change"
+      },
       "glucose_trend": {
         "name": "Glucose trend",
         "state": {
-          "DoubleUp": "Rising quickly",
-          "SingleUp": "Rising",
-          "FortyFiveUp": "Rising slightly",
-          "Flat": "Steady",
-          "FortyFiveDown": "Falling slightly",
-          "SingleDown": "Falling",
-          "DoubleDown": "Falling quickly",
-          "NOT COMPUTABLE": "Not computable",
-          "RATE OUT OF RANGE": "Rate out of range",
-          "NONE": "None"
+          "double_up": "Rising quickly",
+          "single_up": "Rising",
+          "forty_five_up": "Rising slightly",
+          "flat": "Steady",
+          "forty_five_down": "Falling slightly",
+          "single_down": "Falling",
+          "double_down": "Falling quickly",
+          "not_computable": "Not computable",
+          "rate_out_of_range": "Rate out of range",
+          "none": "None"
         }
       },
-      "last_reading": { "name": "Last reading" },
-      "iob": { "name": "Insulin on board" },
-      "cob": { "name": "Carbs on board" },
-      "basal": { "name": "Current basal" },
-      "forecast_15": { "name": "Forecast in 15 minutes" },
-      "forecast_30": { "name": "Forecast in 30 minutes" }
+      "last_reading": {
+        "name": "Last reading"
+      },
+      "iob": {
+        "name": "Insulin on board"
+      },
+      "cob": {
+        "name": "Carbs on board"
+      },
+      "basal": {
+        "name": "Current basal"
+      },
+      "forecast_15": {
+        "name": "Forecast in 15 minutes"
+      },
+      "forecast_30": {
+        "name": "Forecast in 30 minutes"
+      }
     }
   }
 }
