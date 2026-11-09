@@ -1,0 +1,12 @@
+{
+  "domain": "nightscout_extended",
+  "name": "Nightscout Extended",
+  "codeowners": ["@aperetti"],
+  "config_flow": true,
+  "documentation": "https://github.com/aperetti/ha-nightscout-extended",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/aperetti/ha-nightscout-extended/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

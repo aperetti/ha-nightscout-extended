@@ -1,0 +1,70 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Nightscout",
+        "description": "Use an access token with the **readable** role (Nightscout → Admin tools → Subjects). The API secret also works but gives full access.",
+        "data": {
+          "url": "Nightscout URL",
+          "api_key": "Access token or API secret"
+        },
+        "data_description": {
+          "url": "For example https://mysite.example.com",
+          "api_key": "Leave empty if your site is readable without signing in."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Nightscout needs a new token",
+        "description": "{url} rejected the saved token or API secret.",
+        "data": {
+          "api_key": "Access token or API secret"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Couldn't reach Nightscout at that address, or it didn't answer like a Nightscout site.",
+      "invalid_auth": "Nightscout rejected the token or API secret.",
+      "invalid_url": "That isn't a valid URL."
+    },
+    "abort": {
+      "already_configured": "This Nightscout site is already set up.",
+      "reauth_successful": "Reconnected to Nightscout."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Update interval"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "glucose": { "name": "Glucose" },
+      "glucose_delta": { "name": "Glucose change" },
+      "glucose_trend": {
+        "name": "Glucose trend",
+        "state": {
+          "DoubleUp": "Rising quickly",
+          "SingleUp": "Rising",
+          "FortyFiveUp": "Rising slightly",
+          "Flat": "Steady",
+          "FortyFiveDown": "Falling slightly",
+          "SingleDown": "Falling",
+          "DoubleDown": "Falling quickly",
+          "NOT COMPUTABLE": "Not computable",
+          "RATE OUT OF RANGE": "Rate out of range",
+          "NONE": "None"
+        }
+      },
+      "last_reading": { "name": "Last reading" },
+      "iob": { "name": "Insulin on board" },
+      "cob": { "name": "Carbs on board" },
+      "basal": { "name": "Current basal" },
+      "forecast_15": { "name": "Forecast in 15 minutes" },
+      "forecast_30": { "name": "Forecast in 30 minutes" }
+    }
+  }
+}

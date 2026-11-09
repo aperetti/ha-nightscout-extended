@@ -1,0 +1,18 @@
+{
+  "iob": {"iob": 1.35, "activity": 0.01, "lastBolus": null, "source": "Care Portal", "display": "1.35", "displayLine": "IOB: 1.35U"},
+  "cob": {"decayedBy": "2026-01-01T13:00:00.000Z", "isDecaying": 1, "carbs_hr": 15, "rawCarbImpact": 1, "cob": 28.9159125,
+          "lastCarbs": {"eventType": "Meal Bolus", "carbs": 30, "notes": "example", "mills": 1767268800000}, "source": "Care Portal", "display": 28.9, "displayLine": "COB: 28.9g"},
+  "ar2": {"forecast": {"predicted": [
+      {"mills": 1767272700000, "mgdl": 160, "color": "cyan", "scaled": 160},
+      {"mills": 1767273000000, "mgdl": 165, "color": "cyan", "scaled": 165},
+      {"mills": 1767273300000, "mgdl": 169, "color": "cyan", "scaled": 169},
+      {"mills": 1767273600000, "mgdl": 172, "color": "cyan", "scaled": 172},
+      {"mills": 1767273900000, "mgdl": 174, "color": "cyan", "scaled": 174},
+      {"mills": 1767274200000, "mgdl": 175, "color": "cyan", "scaled": 175}
+    ], "avgLoss": 0.044}, "displayLine": "BG 15m: 169 mg/dl"},
+  "bgnow": {"mean": 155, "last": 155, "mills": 1767272400000,
+            "sgvs": [{"mgdl": 155, "mills": 1767272400000, "device": "example", "direction": "FortyFiveUp", "type": "sgv", "scaled": 155}]},
+  "delta": {"absolute": 6, "elapsedMins": 5, "interpolated": false, "mean5MinsAgo": 149, "mgdl": 6, "scaled": 6, "display": "+6"},
+  "direction": {"display": null, "value": "FortyFiveUp", "label": "↗", "entity": "&#8599;"},
+  "basal": {"display": "0.290U", "current": {"basal": 0.29, "treatment": null, "tempbasal": 0.29, "combobolusbasal": 0, "totalbasal": 0.29}}
+}

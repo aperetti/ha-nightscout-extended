@@ -1,0 +1,13 @@
+{
+  "entity": {
+    "sensor": {
+      "glucose_delta": { "default": "mdi:delta" },
+      "glucose_trend": { "default": "mdi:trending-neutral" },
+      "iob": { "default": "mdi:needle" },
+      "cob": { "default": "mdi:food-apple" },
+      "basal": { "default": "mdi:water-outline" },
+      "forecast_15": { "default": "mdi:chart-bell-curve-cumulative" },
+      "forecast_30": { "default": "mdi:chart-bell-curve-cumulative" }
+    }
+  }
+}
