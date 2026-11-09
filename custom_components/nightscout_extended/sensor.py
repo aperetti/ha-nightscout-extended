@@ -13,15 +13,18 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import CONF_URL, UnitOfBloodGlucoseConcentration
+from homeassistant.const import UnitOfBloodGlucoseConcentration
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from homeassistant.util import dt as dt_util
+
 from .api import NightscoutData
-from .const import DOMAIN, UNIT_MMOL
+
+from .const import UNIT_MMOL
 from .coordinator import NightscoutConfigEntry, NightscoutCoordinator
+from .entity import device_info
 
 MGDL = UnitOfBloodGlucoseConcentration.MILLIGRAMS_PER_DECILITER
 MMOL = UnitOfBloodGlucoseConcentration.MILLIMOLE_PER_LITER
@@ -55,6 +58,22 @@ def _forecast_attrs(data: NightscoutData) -> dict[str, Any]:
         ],
         "model": "AR2",
     }
+
+
+def _last(attr: str) -> Callable[[NightscoutData], float | None]:
+    def fn(data: NightscoutData) -> float | None:
+        t = data.last_treatment(attr, dt_util.utcnow())
+        return getattr(t, attr) if t else None
+    return fn
+
+
+def _last_attrs(attr: str) -> Callable[[NightscoutData], dict[str, Any]]:
+    def fn(data: NightscoutData) -> dict[str, Any]:
+        t = data.last_treatment(attr, dt_util.utcnow())
+        if t is None:
+            return {"time": None}
+        return {"time": t.time.isoformat(), "event_type": t.event_type, "notes": t.notes}
+    return fn
 
 
 def _forecast(minutes: int) -> Callable[[NightscoutData], float | None]:
@@ -114,6 +133,22 @@ SENSORS: tuple[NightscoutSensorDescription, ...] = (
         attrs_fn=lambda d: {"source": d.cob_source},
     ),
     NightscoutSensorDescription(
+        key="last_carbs",
+        translation_key="last_carbs",
+        native_unit_of_measurement="g",
+        suggested_display_precision=0,
+        value_fn=_last("carbs"),
+        attrs_fn=_last_attrs("carbs"),
+    ),
+    NightscoutSensorDescription(
+        key="last_insulin",
+        translation_key="last_insulin",
+        native_unit_of_measurement="U",
+        suggested_display_precision=2,
+        value_fn=_last("insulin"),
+        attrs_fn=_last_attrs("insulin"),
+    ),
+    NightscoutSensorDescription(
         key="basal",
         translation_key="basal",
         native_unit_of_measurement="U/h",
@@ -165,14 +200,7 @@ class NightscoutSensor(CoordinatorEntity[NightscoutCoordinator], SensorEntity):
             self._attr_native_unit_of_measurement = MGDL
             self._attr_suggested_unit_of_measurement = MMOL if coordinator.units == UNIT_MMOL else MGDL
             self._attr_suggested_display_precision = 1 if coordinator.units == UNIT_MMOL else 0
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.unique_id or entry.entry_id)},
-            name=entry.title,
-            manufacturer="Nightscout",
-            sw_version=coordinator.status.get("version"),
-            entry_type=DeviceEntryType.SERVICE,
-            configuration_url=entry.data[CONF_URL],
-        )
+        self._attr_device_info = device_info(coordinator)
 
     @property
     def native_value(self) -> float | int | str | datetime | None:

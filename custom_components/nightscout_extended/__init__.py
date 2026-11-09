@@ -11,7 +11,7 @@ from .api import NightscoutAuthError, NightscoutClient, NightscoutConnectionErro
 from .const import CONF_USE_API_SECRET, UNIT_MGDL, UNIT_MMOL
 from .coordinator import NightscoutConfigEntry, NightscoutCoordinator
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.CALENDAR, Platform.SENSOR]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: NightscoutConfigEntry) -> bool:

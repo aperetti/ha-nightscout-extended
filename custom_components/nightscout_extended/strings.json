@@ -80,6 +80,17 @@
       },
       "forecast_30": {
         "name": "Forecast in 30 minutes"
+      },
+      "last_carbs": {
+        "name": "Last carbs"
+      },
+      "last_insulin": {
+        "name": "Last insulin"
+      }
+    },
+    "calendar": {
+      "treatments": {
+        "name": "Treatments"
       }
     }
   }

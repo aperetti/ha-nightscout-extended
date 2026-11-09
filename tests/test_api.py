@@ -64,10 +64,13 @@ async def _serve(handler_check):
             return web.json_response({"status": 401}, status=401)
         if request.path == "/api/v1/status.json":
             return web.json_response({"version": "15.0.9", "settings": {"units": "mg/dl"}})
+        if request.path == "/api/v1/treatments.json":
+            return web.json_response([])
         return web.json_response(PROPS)
 
     app.router.add_get("/api/v1/status.json", guarded)
     app.router.add_get("/api/v2/properties/{names}", guarded)
+    app.router.add_get("/api/v1/treatments.json", guarded)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "127.0.0.1", 0)
@@ -160,3 +163,55 @@ def test_errors_never_contain_the_credential():
 
     msg = asyncio.run(go())
     assert msg and "readable-abc123" not in msg
+
+
+TREATMENTS = json.loads((Path(__file__).parent / "fixtures" / "treatments.json").read_text())
+
+
+def test_parse_treatments():
+    ts = api.parse_treatments(TREATMENTS)
+    assert [t.uid for t in ts] == ["t1", "t2", "t3", "t4", "t5"]  # broken and garbage entries skipped
+    assert ts[0].summary == "Meal Bolus: 30 g carbs"
+    assert ts[1].summary == "Meal Bolus: 2.5 U insulin"
+    assert ts[2].summary == "Correction Bolus: 0.5 U insulin"
+    assert ts[3].summary.startswith("Planned meal: Dinner") and ts[3].carbs is None
+    assert ts[4].summary == "Temporary Target" and ts[4].duration_min == 60
+
+
+def test_last_treatment_ignores_future_and_zero():
+    d = api.NightscoutData(treatments=api.parse_treatments(TREATMENTS))
+    at_17 = datetime(2026, 1, 1, 17, 0, tzinfo=timezone.utc)
+    assert d.last_treatment("carbs", at_17).uid == "t1"
+    assert d.last_treatment("insulin", at_17).uid == "t3"
+    before = datetime(2026, 1, 1, 11, 0, tzinfo=timezone.utc)
+    assert d.last_treatment("carbs", before) is None
+
+
+def test_treatments_query_and_auth():
+    seen = {}
+
+    async def go():
+        app = web.Application()
+
+        async def treatments(request):
+            seen.update(request.query)
+            return web.json_response(TREATMENTS)
+
+        app.router.add_get("/api/v1/treatments.json", treatments)
+        runner = web.AppRunner(app); await runner.setup()
+        site = web.TCPSite(runner, "127.0.0.1", 0); await site.start()
+        port = site._server.sockets[0].getsockname()[1]
+        try:
+            async with aiohttp.ClientSession() as s:
+                c = api.NightscoutClient(s, f"http://127.0.0.1:{port}", "readable-abc123")
+                return await c.async_get_treatments(
+                    datetime(2026, 1, 1, tzinfo=timezone.utc), datetime(2026, 1, 2, tzinfo=timezone.utc)
+                )
+        finally:
+            await runner.cleanup()
+
+    ts = asyncio.run(go())
+    assert len(ts) == 5
+    assert seen["find[created_at][$gte]"] == "2026-01-01T00:00:00.000Z"
+    assert seen["find[created_at][$lte]"] == "2026-01-02T00:00:00.000Z"
+    assert seen["token"] == "readable-abc123"

@@ -22,7 +22,45 @@ integration only provides glucose. This one can run alongside it.
 | Carbs on board | g | Nightscout `cob` plugin |
 | Forecast in 15 minutes | mg/dL or mmol/L | Nightscout `ar2` plugin |
 | Forecast in 30 minutes | mg/dL or mmol/L | Attribute `forecast` holds the whole predicted curve |
+| Last carbs | g | Most recent treatment with carbs; attributes `time`, `event_type`, `notes` |
+| Last insulin | U | Most recent treatment with insulin; same attributes |
 | Current basal | U/h | Disabled by default; enable it if you use a pump |
+
+## Treatments calendar
+
+`calendar.<site>_treatments` shows every Nightscout treatment as an event: meals, boluses, notes, temporary
+targets, and anything logged for a **future** time. The summary reads like `Meal Bolus: 30 g carbs`,
+`Correction Bolus: 0.5 U insulin`, or the first line of a note. The full note is in the event description.
+
+### Example: an alarm before a planned meal
+
+Log a note at the meal's time in Nightscout (or let an app do it; Kitchen Carbs sends planned meals as
+`Planned meal: …` notes). A calendar trigger fires at the event's start, or a set time before it:
+
+```yaml
+automation:
+  - alias: Mealtime reminder
+    triggers:
+      - trigger: calendar
+        event: start
+        entity_id: calendar.nightscout_treatments
+        offset: "-0:10:00"   # 10 minutes before
+    conditions:
+      - condition: template
+        value_template: "{{ trigger.calendar_event.summary.startswith('Planned meal') }}"
+    actions:
+      - action: notify.notify
+        data:
+          title: Mealtime in 10 minutes
+          message: "{{ trigger.calendar_event.summary }}"
+```
+
+Home Assistant checks calendars for upcoming events every 15 minutes, so a reminder for something logged less than
+15 minutes ahead may be skipped.
+
+> Log future meals as **notes**, not with carbs filled in. Nightscout counts carbs and insulin from the
+> treatment's time onwards whether or not they happened, so a planned meal with carbs would show up in COB and the
+> forecast if it's skipped.
 
 A sensor shows *unknown* when its Nightscout plugin is off. Enable `iob`, `cob`, `ar2` and `basal` in Nightscout's
 `ENABLE` setting to get them all.

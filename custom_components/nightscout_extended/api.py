@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import aiohttp
@@ -32,6 +32,33 @@ class ForecastPoint:
 
 
 @dataclass
+class Treatment:
+    """A Nightscout treatment: a meal, a dose, a note, or anything else Care Portal can log."""
+
+    uid: str
+    time: datetime
+    event_type: str
+    carbs: float | None = None
+    insulin: float | None = None
+    notes: str | None = None
+    entered_by: str | None = None
+    duration_min: float | None = None
+
+    @property
+    def summary(self) -> str:
+        parts = []
+        if self.carbs:
+            parts.append(f"{self.carbs:g} g carbs")
+        if self.insulin:
+            parts.append(f"{self.insulin:g} U insulin")
+        if parts:
+            return f"{self.event_type}: {', '.join(parts)}"
+        if self.notes:
+            return self.notes.strip().splitlines()[0][:120]
+        return self.event_type
+
+
+@dataclass
 class NightscoutData:
     """One poll's worth of values. Glucose values are always mg/dL here."""
 
@@ -45,6 +72,14 @@ class NightscoutData:
     cob_source: str | None = None
     basal: float | None = None
     forecast: list[ForecastPoint] = field(default_factory=list)
+    treatments: list[Treatment] = field(default_factory=list)  # sorted by time, past and future
+
+    def last_treatment(self, attr: str, now: datetime) -> Treatment | None:
+        """The most recent treatment at or before `now` with a non-zero `attr` (carbs or insulin)."""
+        for t in reversed(self.treatments):
+            if t.time <= now and getattr(t, attr):
+                return t
+        return None
 
     def forecast_at(self, minutes: int) -> ForecastPoint | None:
         """The forecast point closest to `minutes` after the latest reading (within 3 min)."""
@@ -108,6 +143,49 @@ def parse_properties(props: dict[str, Any]) -> NightscoutData:
     return data
 
 
+def _parse_time(item: dict[str, Any]) -> datetime | None:
+    created = item.get("created_at")
+    if isinstance(created, str) and created:
+        try:
+            dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    return _ms_to_dt(item.get("mills") or item.get("date"))
+
+
+def parse_treatments(items: Any) -> list[Treatment]:
+    """Turn /api/v1/treatments.json into Treatments, oldest first. Unusable entries are skipped."""
+    out: list[Treatment] = []
+    if not isinstance(items, list):
+        return out
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        when = _parse_time(item)
+        if when is None:
+            continue
+        notes = item.get("notes")
+        out.append(
+            Treatment(
+                uid=str(item.get("_id") or item.get("identifier") or f"{item.get('eventType')}-{when.isoformat()}"),
+                time=when,
+                event_type=str(item.get("eventType") or "Treatment"),
+                carbs=_num(item.get("carbs")) or None,
+                insulin=_num(item.get("insulin")) or None,
+                notes=notes if isinstance(notes, str) and notes.strip() else None,
+                entered_by=item.get("enteredBy") if isinstance(item.get("enteredBy"), str) else None,
+                duration_min=_num(item.get("duration")) or None,
+            )
+        )
+    out.sort(key=lambda t: t.time)
+    return out
+
+
+def _iso(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
 class NightscoutClient:
     """Reads a Nightscout site with an access token or the API secret."""
 
@@ -125,8 +203,9 @@ class NightscoutClient:
             return {"api-secret": digest}, {}
         return {}, {"token": self._credential}
 
-    async def _get(self, path: str) -> Any:
+    async def _get(self, path: str, query: dict[str, str] | None = None) -> Any:
         headers, params = self._auth()
+        params = {**(query or {}), **params}
         headers["Accept"] = "application/json"
         try:
             # No redirects: the token or API secret must never be sent to a host the user didn't enter.
@@ -172,11 +251,27 @@ class NightscoutClient:
         await self._get("/api/v2/properties/bgnow")
         return status
 
-    async def async_get_data(self) -> NightscoutData:
+    async def async_get_treatments(self, start: datetime, end: datetime, limit: int = 1000) -> list[Treatment]:
+        items = await self._get(
+            "/api/v1/treatments.json",
+            {
+                "find[created_at][$gte]": _iso(start),
+                "find[created_at][$lte]": _iso(end),
+                "count": str(limit),
+            },
+        )
+        return parse_treatments(items)
+
+    async def async_get_data(
+        self, past: timedelta = timedelta(hours=48), ahead: timedelta = timedelta(days=62)
+    ) -> NightscoutData:
         props = await self._get(f"/api/v2/properties/{PROPERTIES}")
         if not isinstance(props, dict):
             raise NightscoutConnectionError("Unexpected properties response")
-        return parse_properties(props)
+        data = parse_properties(props)
+        now = datetime.now(timezone.utc)
+        data.treatments = await self.async_get_treatments(now - past, now + ahead)
+        return data
 
     @property
     def uses_api_secret(self) -> bool:
