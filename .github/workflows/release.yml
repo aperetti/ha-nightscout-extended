@@ -1,0 +1,40 @@
+name: Release
+
+# Push a tag like v0.3.0 to publish a release. The notes come from that version's section in CHANGELOG.md.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only this job can create the release
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches manifest.json
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          manifest=$(jq -r .version custom_components/nightscout_extended/manifest.json)
+          if [ "$tag" != "$manifest" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match manifest.json version $manifest"
+            exit 1
+          fi
+
+      - name: Get the notes from CHANGELOG.md
+        run: .github/scripts/changelog-section.sh "$GITHUB_REF_NAME" > notes.md
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "" >> notes.md
+          prev=$(git ls-remote --tags origin 'v*' | sed 's#.*refs/tags/##' | grep -v '\^{}' | sort -V | grep -B1 -x "$GITHUB_REF_NAME" | head -1)
+          if [ -n "$prev" ] && [ "$prev" != "$GITHUB_REF_NAME" ]; then
+            echo "**Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/$prev...$GITHUB_REF_NAME" >> notes.md
+          fi
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag

@@ -106,3 +106,11 @@ uv run --with pytest --with aiohttp pytest tests -q                       # pars
 uv run --python 3.14 --with pytest-homeassistant-custom-component \
   pytest tests_ha -q -c tests_ha/pytest.ini -p no:cacheprovider          # inside Home Assistant
 ```
+
+### Releasing
+
+1. Add a section for the new version at the top of `CHANGELOG.md` and bump `version` in `manifest.json`.
+2. Commit, then tag and push: `git tag v0.3.0 && git push origin main v0.3.0`.
+
+The *Release* workflow checks that the tag matches `manifest.json`, then publishes the release with that
+version's changelog section as its notes (which Home Assistant shows in the update dialog).
