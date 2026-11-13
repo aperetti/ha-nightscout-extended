@@ -211,6 +211,12 @@ class NightscoutSensor(CoordinatorEntity[NightscoutCoordinator], SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        if self.entity_description.attrs_fn is None:
-            return None
-        return self.entity_description.attrs_fn(self.coordinator.data)
+        attrs = (
+            self.entity_description.attrs_fn(self.coordinator.data)
+            if self.entity_description.attrs_fn
+            else None
+        )
+        if self.entity_description.key == "glucose":
+            # For the bundled card: colour the reading by the site's own alarm levels.
+            attrs = {**(attrs or {}), "thresholds_mgdl": self.coordinator.thresholds_mgdl}
+        return attrs

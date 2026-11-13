@@ -11,7 +11,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import NightscoutAuthError, NightscoutClient, NightscoutConnectionError, NightscoutData
-from .const import CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, DEFAULT_THRESHOLDS_MGDL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,6 +38,28 @@ class NightscoutCoordinator(DataUpdateCoordinator[NightscoutData]):
         self.client = client
         self.units = units
         self.status: dict = {}
+
+    @property
+    def thresholds_mgdl(self) -> dict[str, float]:
+        """The site's alarm thresholds (BG_LOW, BG_TARGET_BOTTOM/TOP, BG_HIGH) in mg/dL.
+
+        Nightscout reports them in mg/dL whatever the display unit; its defaults fill gaps.
+        """
+        raw = (self.status.get("settings") or {}).get("thresholds") or {}
+        out = dict(DEFAULT_THRESHOLDS_MGDL)
+        for key, ns_key in (
+            ("urgent_low", "bgLow"),
+            ("low", "bgTargetBottom"),
+            ("high", "bgTargetTop"),
+            ("urgent_high", "bgHigh"),
+        ):
+            try:
+                value = float(raw[ns_key])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if value > 0:
+                out[key] = value
+        return out
 
     async def _async_update_data(self) -> NightscoutData:
         try:

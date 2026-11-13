@@ -31,6 +31,15 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv run --python 3.13 --with pytest --with aiohttp pytest tests -q
 
+  tests-card:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --test tests_js/*.test.mjs
+
   tests-ha:
     runs-on: ubuntu-latest
     steps:

@@ -14,7 +14,7 @@ integration only provides glucose. This one can run alongside it.
 
 | Sensor | Unit | Notes |
 |---|---|---|
-| Glucose | mg/dL or mmol/L | Follows your Nightscout's unit setting; attributes `direction`, `delta` |
+| Glucose | mg/dL or mmol/L | Follows your Nightscout's unit setting; attributes `direction`, `delta`, `thresholds_mgdl` (your site's alarm levels) |
 | Glucose change | mg/dL or mmol/L | Change since the previous reading |
 | Glucose trend | – | Rising quickly … Falling quickly |
 | Last reading | timestamp | When the latest CGM value was taken |
@@ -65,6 +65,46 @@ Home Assistant checks calendars for upcoming events every 15 minutes, so a remin
 A sensor shows *unknown* when its Nightscout plugin is off. Enable `iob`, `cob`, `ar2` and `basal` in Nightscout's
 `ENABLE` setting to get them all.
 
+## Glucose card
+
+The integration comes with a glanceable glucose display for a kitchen tablet, a bedside screen or any dashboard.
+It loads automatically: there's no resource to add. In a dashboard, **Add card → Nightscout Glucose**, or:
+
+```yaml
+type: custom:nightscout-glucose-card
+name: Sam
+```
+
+| Day | Night (coloured text on black) |
+|---|---|
+| ![Glucose card](docs/glucose-card.png) | ![Glucose card at night](docs/glucose-card-night.png) |
+
+- **Big reading, trend arrow and change**, with how long ago it was taken and a bar that empties as it gets older.
+- **Coloured by your Nightscout alarm levels** (`BG_LOW`, `BG_TARGET_BOTTOM`, `BG_TARGET_TOP`, `BG_HIGH`): urgent
+  low, low, in range, high, urgent high. Grey with a warning once there's been no reading for 15 minutes.
+- **Chart behind the number**: recent readings, the target range, and the AR2 forecast as a dotted line.
+- **Night mode** from 21:00 to 07:00 by default.
+- **IOB, COB and the 30-minute forecast** along the bottom.
+- mg/dL or mmol/L, following the sensor's unit.
+
+It finds the integration's sensors itself; set `entity` if you have more than one Nightscout site.
+
+| Option | Default | |
+|---|---|---|
+| `entity` | found automatically | The *Glucose* sensor of the site to show |
+| `name` | none | Text at the top, e.g. whose readings these are |
+| `fill_screen` | `false` | Fill the screen from the card's top edge down, for a panel view on a kiosk (works with the header hidden) |
+| `hours_to_show` | `3` | Hours of history in the chart (1–48) |
+| `show_chart`, `show_footer`, `show_clock` | `true` | Turn parts off |
+| `night_mode` | `true` | Dim to coloured text on black at night |
+| `night_start`, `night_end` | `21`, `7` | Night hours (0–23) |
+| `stale_minutes` | `15` | Minutes without a reading before the card turns grey |
+
+For a full-screen display, put the card alone in a **panel** view and set `fill_screen: true`.
+
+> The card shows what Home Assistant last read from Nightscout. It is not an alarm: it makes no sound and can't
+> tell you about readings Home Assistant hasn't received. Keep your CGM app's alerts on.
+
 ## Installation
 
 **Marketplace (HACS):** search for *Nightscout Extended* and install. Until it's in the default list, add this
@@ -105,11 +145,17 @@ series:
 uv run --with pytest --with aiohttp pytest tests -q                       # parsing and auth
 uv run --python 3.14 --with pytest-homeassistant-custom-component \
   pytest tests_ha -q -c tests_ha/pytest.ini -p no:cacheprovider          # inside Home Assistant
+node --test tests_js/*.test.mjs                                           # glucose card logic
 ```
+
+The card is a single dependency-free file, `custom_components/nightscout_extended/www/nightscout-glucose-card.js`.
+Its `CARD_VERSION` must match `manifest.json` (a test checks this); the version is part of the URL Home Assistant
+loads it from, so browsers fetch the new card after an update.
 
 ### Releasing
 
-1. Add a section for the new version at the top of `CHANGELOG.md` and bump `version` in `manifest.json`.
+1. Add a section for the new version at the top of `CHANGELOG.md` and bump `version` in `manifest.json` and
+   `CARD_VERSION` in the card.
 2. Commit, then tag and push: `git tag v0.3.0 && git push origin main v0.3.0`.
 
 The *Release* workflow checks that the tag matches `manifest.json`, then publishes the release with that

@@ -5,13 +5,24 @@ from __future__ import annotations
 from homeassistant.const import CONF_API_KEY, CONF_URL, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.typing import ConfigType
 
 from .api import NightscoutAuthError, NightscoutClient, NightscoutConnectionError
-from .const import CONF_USE_API_SECRET, UNIT_MGDL, UNIT_MMOL
+from .card import async_register_card
+from .const import CONF_USE_API_SECRET, DOMAIN, UNIT_MGDL, UNIT_MMOL
 from .coordinator import NightscoutConfigEntry, NightscoutCoordinator
 
 PLATFORMS = [Platform.CALENDAR, Platform.SENSOR]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Runs once, before any entry: makes the glucose card available on dashboards."""
+    await async_register_card(hass)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: NightscoutConfigEntry) -> bool:

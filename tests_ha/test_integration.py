@@ -153,3 +153,63 @@ async def test_calendar_trigger_fires_before_planned_meal(hass: HomeAssistant, a
     await hass.async_block_till_done()
     assert len(calls) == 1
     assert calls[0].data["message"].startswith("Planned meal: Dinner")
+
+
+async def _setup(hass: HomeAssistant, aioclient_mock, status=STATUS):
+    _mock(aioclient_mock, status=status)
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id=URL, title="NS",
+        data={CONF_URL: URL, CONF_API_KEY: "readable-abc", CONF_USE_API_SECRET: False},
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    return entry
+
+
+async def test_glucose_sensor_exposes_site_thresholds(hass: HomeAssistant, aioclient_mock):
+    status = {"version": "15.0.9", "settings": {
+        "units": "mg/dl",
+        "thresholds": {"bgHigh": 250, "bgTargetTop": 170, "bgTargetBottom": 75, "bgLow": "bad"},
+    }}
+    await _setup(hass, aioclient_mock, status)
+    attrs = hass.states.get("sensor.ns_glucose").attributes
+    # bgLow is unusable, so Nightscout's default fills that one in.
+    assert attrs["thresholds_mgdl"] == {"urgent_low": 55.0, "low": 75.0, "high": 170.0, "urgent_high": 250.0}
+    assert attrs["direction"] == "FortyFiveUp"  # existing attributes are kept
+
+
+async def test_glucose_thresholds_default_when_status_has_none(hass: HomeAssistant, aioclient_mock):
+    await _setup(hass, aioclient_mock)
+    assert hass.states.get("sensor.ns_glucose").attributes["thresholds_mgdl"] == {
+        "urgent_low": 55.0, "low": 80.0, "high": 180.0, "urgent_high": 260.0
+    }
+
+
+async def test_card_is_served_and_loaded_on_dashboards(hass: HomeAssistant, hass_client, aioclient_mock, monkeypatch):
+    from homeassistant.setup import async_setup_component
+
+    from custom_components.nightscout_extended import card
+
+    added: list[str] = []
+    monkeypatch.setattr(card, "add_extra_js_url", lambda _hass, url: added.append(url))
+    assert await async_setup_component(hass, "http", {})
+    hass.config.components.add("frontend")  # the test harness has no frontend package
+    await _setup(hass, aioclient_mock)
+
+    assert added == [f"{card.CARD_URL}?v=0.3.0"]
+    client = await hass_client()
+    resp = await client.get(card.CARD_URL)
+    assert resp.status == 200
+    assert 'customElements.define("nightscout-glucose-card"' in await resp.text()
+
+
+async def test_card_skipped_without_frontend(hass: HomeAssistant, aioclient_mock, monkeypatch):
+    from custom_components.nightscout_extended import card
+
+    added: list[str] = []
+    monkeypatch.setattr(card, "add_extra_js_url", lambda _hass, url: added.append(url))
+    entry = await _setup(hass, aioclient_mock)
+    assert added == []  # no crash, and the sensors still load
+    assert hass.states.get("sensor.ns_glucose") is not None
+    assert await hass.config_entries.async_unload(entry.entry_id)
