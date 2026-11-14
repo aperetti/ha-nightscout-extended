@@ -3,6 +3,12 @@
 Each version's section becomes its GitHub release notes, which Home Assistant shows in the update dialog.
 Add a section here before tagging a release.
 
+## [0.3.1] - 2026-11-13
+
+### Fixed
+- **Glucose card** no longer gets cut off on the right when it sits next to a taller card in a horizontal stack,
+  e.g. on a tablet in portrait. It now fills its slot instead of growing wider than it.
+
 ## [0.3.0] - 2026-11-12
 
 ### New

@@ -8,7 +8,7 @@
  * at night, and draws recent readings plus the AR2 forecast behind the number.
  */
 
-export const CARD_VERSION = "0.3.0";
+export const CARD_VERSION = "0.3.1";
 const PLATFORM = "nightscout_extended";
 const MGDL_PER_MMOL = 18.0182;
 const DEFAULT_THRESHOLDS = { urgent_low: 55, low: 80, high: 180, urgent_high: 260 };
@@ -282,7 +282,9 @@ class NightscoutGlucoseCard extends HTMLElement {
         ha-card { display: block; height: 100%; overflow: hidden; position: relative; border: none; }
         .wrap {
           container-type: size; position: relative; box-sizing: border-box;
-          height: 100%; min-height: 200px; aspect-ratio: 16 / 10;
+          /* An explicit width keeps aspect-ratio from deriving the width from a stretched
+             height (e.g. in a horizontal stack in portrait), which pushed it off the side. */
+          width: 100%; height: 100%; min-height: 200px; aspect-ratio: 16 / 10;
           display: grid; grid-template-rows: auto 1fr auto auto;
           padding: 3cqh 3cqw 2cqh;
           background: var(--ngc-bg); color: var(--ngc-fg);
